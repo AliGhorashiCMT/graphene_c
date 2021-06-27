@@ -12,6 +12,40 @@ double a = 2.46;
 //double b2[2] = {0, 4*pi/(a*sqrt(3))};
 
 
+double in_unit_cell(double x, double y){
+	double d0 = pow(x, 2)+pow(y,2);
+	double d1 = pow(x-a, 2)+pow(y, 2);
+	double d2 = pow(x+a, 2)+pow(y, 2);
+	double d3 = pow(x-a/2.00, 2)+pow(y-a*sqrt(3)/2.00, 2);
+        double d4 = pow(x+a/2.00, 2)+pow(y+a*sqrt(3)/2.00, 2);
+        double d5 = pow(x-a/2.00, 2)+pow(y+a*sqrt(3)/2.00, 2);
+        double d6 = pow(x+a/2.00, 2)+pow(y-a*sqrt(3)/2.00, 2);
+	if ( (d0 < d1 ) && (d0 < d2) && (d0 < d3) && (d0 < d4) && (d0 < d5) && (d0 < d6) ){
+		return 1;
+	}
+	else{
+		return 0;
+	}
+}
+
+double in_brillouin_zone(double kx, double ky){
+	double b = 4*pi/(a*sqrt(3));
+	double d0 = pow(kx, 2) + pow(ky, 2);
+	double d1 = pow(kx, 2) + pow(ky-b, 2);
+	double d2 = pow(kx, 2) + pow(ky+b, 2);
+	double d3 = pow(kx-b*sqrt(3)/2.00, 2) + pow(ky-b/2.00, 2);
+	double d4 = pow(kx+b*sqrt(3)/2.00, 2) + pow(ky+b/2.00, 2);
+	double d5 = pow(kx-b*sqrt(3)/2.00, 2) + pow(ky+b/2.00, 2);
+	double d6 = pow(kx+b*sqrt(3)/2.00, 2) + pow(ky-b/2.00, 2);
+
+        if ( (d0 < d1 ) && (d0 < d2) && (d0 < d3) && (d0 < d4) && (d0 < d5) && (d0 < d6) ){
+                return 1;
+        }
+        else{
+                return 0;
+        }
+}
+
 double full_dispersion(double kx, double ky){
 	double a_nn = 1.42; //Angstroms
 	double hopping = 2.8; //eV
@@ -102,7 +136,34 @@ int main(int argc, char * argv[]){
 	
 	double mesh = atof(argv[1]);
 	double width = atof(argv[2]);
-	dos2(mesh, width);
+	double meshu = atof(argv[3]);
+	double meshb = atof(argv[4]);
 
+	dos2(mesh, width);
+	
+	FILE *fpcell;
+        fpcell = fopen("./unitcell.txt", "w"); 
+	FILE *fpbcell;
+        fpbcell = fopen("./brillouinzone.txt", "w");
+
+	for(int i=1; i<meshu; i++){
+		double x = 5.00*(double)(i-meshu/2.000)/meshu;
+		for(int j=1; j< meshu; j++){
+                	double y = 5.00*(double)(j-meshu/2.000)/meshu;
+			fprintf(fpcell, "%f\t", in_unit_cell(x, y));
+		}
+		fprintf(fpcell, "\n");
+	}
+	fclose(fpcell);
+
+        for(int i=1; i<meshb; i++){
+                double kx = 2*K[0]*(double)(i-meshb/2.00)/meshb;
+                for(int j=1; j<meshb; j++){
+                        double ky = 2*K[0]*(double)(j-meshb/2.00)/meshb;
+                        fprintf(fpbcell, "%f\t", in_brillouin_zone(kx, ky));
+                }
+                fprintf(fpbcell, "\n");
+        }
+        fclose(fpbcell);
 	return 0;
 }
