@@ -2,7 +2,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <complex.h>
-
+#include "cubature.h"
 
 double pi = 3.14159265;
 double a = 2.46;
@@ -11,6 +11,40 @@ double a = 2.46;
 //double b1[2] = {2*pi/a, 2*pi/(sqrt(3)*a)};
 //double b2[2] = {0, 4*pi/(a*sqrt(3))};
 
+int plasmon(unsigned ndim, const double *x, void *fdata, unsigned fdim, double *fval) {
+    double q = *((double *) fdata); // we can pass σ via fdata argument
+    fdata = fdata + sizeof(double);
+    double omega =  *((double *) fdata);
+    // printf("q = %f\n", q );
+    // printf("omega = %f\n", omega);
+    double k = x[0];
+    double theta = x[1];
+    if(6*k > 1){
+        fval[0] = 0;
+        return 0;
+    }
+    else{
+        //fval[0] = k;
+         double ek = 6*k;
+         double ekq = 6*sqrt(k*k+q*q+2*k*q*cos(theta));
+         fval[0] = -(k/(pi*pi))*creal(2*(ekq-ek)/((ekq-ek)*(ekq-ek)-(omega+.001*I)*(omega+.001*I)));
+    }
+    // compute the output value: note that fdim should == 1 from below
+    return 0; // success*
+}
+
+double plasmon_calculator(double q, double omega){
+    double val;
+    double err;
+    double qomega[] ={q, omega};
+    void * pqomega = qomega;
+    double xmin[2] = {0, 0}; double xmax[2] = {1, 2*pi};
+    hcubature(1, plasmon, pqomega, 2, xmin, xmax, 0, 0, 1e-4, ERROR_INDIVIDUAL, &val, &err);
+    double epsilon = 1-(90.5/qomega[0])*val;
+    //printf("Epsilon = %f\n", epsilon);
+    //printf("Computed integral = %0.10g +/- %g\n", val, err);
+    return epsilon;
+}
 
 double in_unit_cell(double x, double y){
 	double d0 = pow(x, 2)+pow(y,2);
@@ -138,6 +172,7 @@ int main(int argc, char * argv[]){
 	double width = atof(argv[2]);
 	double meshu = atof(argv[3]);
 	double meshb = atof(argv[4]);
+	double meshplas = atof(argv[5]);
 
 	dos2(mesh, width);
 	
@@ -165,5 +200,20 @@ int main(int argc, char * argv[]){
                 fprintf(fpbcell, "\n");
         }
         fclose(fpbcell);
+        FILE *epsilonfile;
+        epsilonfile = fopen("./epsilon.txt", "w");
+
+
+        for(int i=1; i<meshplas; i++){
+            printf("Iteration number: %d\n of %f ", i, meshplas );
+            double q = ((double) i)/(meshplas)*(2.00/6.000);
+	    for(int j=1; j<meshplas; j++){
+                 double omega = ((double) j)/(meshplas)*(3.00);
+		  double epsilon = plasmon_calculator(q, omega);
+	         fprintf(epsilonfile, "%f\t", epsilon);
+            }
+            fprintf(epsilonfile, "\n");
+        }
+        fclose(epsilonfile);
 	return 0;
 }
