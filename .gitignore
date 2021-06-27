@@ -1,3 +1,4 @@
 *.txt
 hcubature.c
 cubature.h
+*.h
